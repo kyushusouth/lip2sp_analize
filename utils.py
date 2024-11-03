@@ -352,7 +352,7 @@ class Manager:
         return df_result
 
     def aggregate_test_data_df(
-        self, df: pl.DataFrame, cols_groupby: list[str], sort_by: list[str]
+        self, df: pl.DataFrame, cols_groupby: list[str]
     ) -> pl.DataFrame:
         df_result = (
             df.join(
