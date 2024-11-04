@@ -107,11 +107,16 @@ class Manager:
             for data_path in data_path_lst:
                 loss_name = data_path.stem.split("_table_")[0]
 
-                if (
-                    df_row["method_id"] == 0 or df_row["method_id"] == 1
-                ) and loss_name not in [
+                if df_row["method_id"] == 0 and loss_name not in [
                     "mel_loss",
                     "ssl_feature_cluster_loss",
+                    "total_loss",
+                ]:
+                    continue
+                if df_row["method_id"] == 1 and loss_name not in [
+                    "mel_loss",
+                    "ssl_feature_cluster_loss",
+                    "ssl_conv_feature_loss",
                     "total_loss",
                 ]:
                     continue
@@ -150,7 +155,7 @@ class Manager:
                     if df_row["run_id"] in ["2zoxvtrk", "tg4r230f"]:
                         if df_row["run_id"] == "2zoxvtrk":
                             data_row += [
-                                df_row["run_id"],
+                                "tg4r230f",
                                 loss_name,
                                 df_row["method_id"],
                                 df_row["loss_weight"],
@@ -168,7 +173,7 @@ class Manager:
                                 + 1
                             )
                             data_row += [
-                                "2zoxvtrk",
+                                df_row["run_id"],
                                 loss_name,
                                 df_row["method_id"],
                                 df_row["loss_weight"],
@@ -177,7 +182,7 @@ class Manager:
                     elif df_row["run_id"] in ["pstdmqnu", "yz0nwsvz"]:
                         if df_row["run_id"] == "pstdmqnu":
                             data_row += [
-                                df_row["run_id"],
+                                "yz0nwsvz",
                                 loss_name,
                                 df_row["method_id"],
                                 df_row["loss_weight"],
@@ -195,7 +200,7 @@ class Manager:
                                 + 1
                             )
                             data_row += [
-                                "pstdmqnu",
+                                df_row["run_id"],
                                 loss_name,
                                 df_row["method_id"],
                                 df_row["loss_weight"],
@@ -250,7 +255,12 @@ class Manager:
     def save_learning_curves(self, data_dir: Path, save_dir: Path) -> None:
         df = self.preprocess_losses_df(data_dir)
         color_lst = ["red", "gold", "green", "blue", "purple"]
-        loss_name_lst = ["mel_loss", "ssl_feature_cluster_loss", "total_loss"]
+        loss_name_lst = [
+            "mel_loss",
+            "ssl_feature_cluster_loss",
+            "ssl_conv_feature_loss",
+            "total_loss",
+        ]
         for method_id in sorted(
             list(df.select(pl.col("method_id")).unique().to_numpy().reshape(-1))
         ):
@@ -258,7 +268,10 @@ class Manager:
             save_dir_method.mkdir(parents=True, exist_ok=True)
 
             for loss_name in loss_name_lst:
-                fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12, 4))
+                if loss_name == "ssl_conv_feature_loss" and method_id != 1:
+                    continue
+
+                fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12, 5))
 
                 for loss_weight, color in zip(
                     sorted(
@@ -276,7 +289,7 @@ class Manager:
                         & (pl.col("loss_type") == "validation loss")
                         & (pl.col("method_id") == method_id)
                         & (pl.col("loss_weight") == loss_weight)
-                    )
+                    ).sort(["epoch"])
                     ax.plot(
                         data_val["epoch"],
                         data_val["loss_value"],
@@ -289,7 +302,7 @@ class Manager:
                         & (pl.col("loss_type") == "train loss")
                         & (pl.col("method_id") == method_id)
                         & (pl.col("loss_weight") == loss_weight)
-                    )
+                    ).sort(["epoch"])
                     ax.plot(
                         data_train["epoch"],
                         data_train["loss_value"],
@@ -298,16 +311,17 @@ class Manager:
                         linestyle="dotted",
                     )
 
-                    min_val_loss = df.filter(
+                    val_loss_selected_epoch = df.filter(
                         (pl.col("loss_name") == loss_name)
                         & (pl.col("loss_type") == "validation loss")
                         & (pl.col("method_id") == method_id)
                         & (pl.col("loss_weight") == loss_weight)
                         & (pl.col("epoch") == pl.col("selected_epoch"))
                     )
+                    assert val_loss_selected_epoch.shape[0] == 1
                     ax.plot(
-                        min_val_loss["epoch"],
-                        min_val_loss["loss_value"],
+                        val_loss_selected_epoch["epoch"],
+                        val_loss_selected_epoch["loss_value"],
                         marker="o",
                         color=color,
                         markersize=8,
@@ -318,13 +332,20 @@ class Manager:
                     ax.set_xlim(-1, 51)
                     if loss_name == "mel_loss":
                         ax.set_ylim(0.2, 0.9)
+                    elif loss_name == "ssl_feature_cluster_loss":
+                        ax.set_ylim(0.5, 5.5)
+                    elif loss_name == "ssl_conv_feature_loss":
+                        ax.set_ylim(0.1, 0.4)
+                    elif loss_name == "total_loss":
+                        ax.set_ylim(0, 4.0)
 
                 plt.legend(bbox_to_anchor=(1, 1), loc="upper left")
                 fig.tight_layout()
 
                 save_path = save_dir / str(method_id) / f"{loss_name}.png"
-                save_path.parents[0].mkdir(exist_ok=True, parents=True)
+                save_path.parent.mkdir(exist_ok=True, parents=True)
                 fig.savefig(str(save_path))
+                plt.close()
 
     def preprocess_test_data_df(self, data_dir: Path) -> pl.DataFrame:
         data_path_lst = list(data_dir.glob("**/test_data_*.json"))
@@ -344,7 +365,8 @@ class Manager:
             df = df.with_columns(pl.lit(run_id).alias("run_id"))
             df_lst.append(df)
 
-        df_result = pl.concat(df_lst, how="vertical").with_columns(
+        df_result = pl.concat(df_lst, how="vertical")
+        df_result = df_result.with_columns(
             pl.col("wer_kanjikana") * 100,
             pl.col("cer_kana") * 100,
             pl.col("per_phoneme") * 100,
@@ -423,12 +445,11 @@ class Manager:
 
         df_result = (
             df.filter(
-                (pl.col("run_id").is_in([run_id_baseline, run_id_compare]))
+                (pl.col("run_id") == run_id_compare)
                 & (pl.col("kind") == "pred_mel_speech_ssl")
             )
             .select(
                 [
-                    "run_id",
                     "speaker",
                     "filename",
                     "wer_kanjikana",
@@ -453,13 +474,10 @@ class Manager:
                         "speaker",
                         "filename",
                         "wer_kanjikana",
-                        "utt_gt_kanjikana",
                         "utt_recog_kanjikana",
                         "cer_kana",
-                        "utt_gt_kana",
                         "utt_recog_kana",
                         "per_phoneme",
-                        "utt_gt_phoneme",
                         "utt_recog_phoneme",
                         "spk_sim",
                     ]
@@ -467,13 +485,10 @@ class Manager:
                 .rename(
                     {
                         "wer_kanjikana": "wer_kanjikana_baseline",
-                        "utt_gt_kanjikana": "utt_gt_kanjikana_baseline",
                         "utt_recog_kanjikana": "utt_recog_kanjikana_baseline",
                         "cer_kana": "cer_kana_baseline",
-                        "utt_gt_kana": "utt_gt_kana_baseline",
                         "utt_recog_kana": "utt_recog_kana_baseline",
                         "per_phoneme": "per_phoneme_baseline",
-                        "utt_gt_phoneme": "utt_gt_phoneme_baseline",
                         "utt_recog_phoneme": "utt_recog_phoneme_baseline",
                         "spk_sim": "spk_sim_baseline",
                     }
@@ -493,17 +508,8 @@ class Manager:
                 ),
                 (pl.col("spk_sim") - pl.col("spk_sim_baseline")).alias("spk_sim_diff"),
             )
-            .join(
-                self.df.select(["run_id", "method_id", "loss_weight"]),
-                on=["run_id"],
-                how="left",
-                coalesce=True,
-            )
             .select(
                 [
-                    "run_id",
-                    "method_id",
-                    "loss_weight",
                     "speaker",
                     "filename",
                     "wer_kanjikana_baseline",
@@ -529,8 +535,8 @@ class Manager:
                     "spk_sim_diff",
                 ],
             )
-            .sort(["speaker", "filename", "method_id", "loss_weight"])
-        ).filter(pl.col("run_id") == run_id_compare)
+            .sort(["speaker", "filename"])
+        )
 
         save_path.parent.mkdir(parents=True, exist_ok=True)
         df_result.write_csv(str(save_path))

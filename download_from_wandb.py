@@ -38,7 +38,7 @@ def main():
             "total_loss_table",
             "test_data",
         ],
-        Path("./wandb_data_test"),
+        Path("./wandb_data"),
         100,
         3.0,
     )
