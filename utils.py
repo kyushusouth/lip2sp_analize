@@ -248,7 +248,7 @@ class Manager:
             "loss_value",
         ).sort(["loss_weight", "method_id", "loss_type", "loss_name"]).pivot(
             on=["loss_name"],
-            index=["method_id", "loss_weight", "selected_epoch"],
+            index=["run_id", "method_id", "loss_weight", "selected_epoch"],
             values=["loss_value"],
         ).write_csv(str(save_path))
 
@@ -271,7 +271,7 @@ class Manager:
                 if loss_name == "ssl_conv_feature_loss" and method_id != 1:
                     continue
 
-                fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12, 5))
+                fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12, 4))
 
                 for loss_weight, color in zip(
                     sorted(
@@ -448,8 +448,10 @@ class Manager:
                 (pl.col("run_id") == run_id_compare)
                 & (pl.col("kind") == "pred_mel_speech_ssl")
             )
+            .join(self.df.select(["run_id", "run_date"]), on=["run_id"], how="left")
             .select(
                 [
+                    "run_date",
                     "speaker",
                     "filename",
                     "wer_kanjikana",
@@ -464,13 +466,27 @@ class Manager:
                     "spk_sim",
                 ]
             )
+            .rename(
+                {
+                    "run_date": "run_date_compare",
+                    "wer_kanjikana": "wer_kanjikana_compare",
+                    "utt_recog_kanjikana": "utt_recog_kanjikana_compare",
+                    "cer_kana": "cer_kana_compare",
+                    "utt_recog_kana": "utt_recog_kana_compare",
+                    "per_phoneme": "per_phoneme_compare",
+                    "utt_recog_phoneme": "utt_recog_phoneme_compare",
+                    "spk_sim": "spk_sim_compare",
+                }
+            )
             .join(
                 df.filter(
                     (pl.col("run_id") == run_id_baseline)
                     & (pl.col("kind") == "pred_mel_speech_ssl")
                 )
+                .join(self.df.select(["run_id", "run_date"]), on=["run_id"], how="left")
                 .select(
                     [
+                        "run_date",
                         "speaker",
                         "filename",
                         "wer_kanjikana",
@@ -484,6 +500,7 @@ class Manager:
                 )
                 .rename(
                     {
+                        "run_date": "run_date_baseline",
                         "wer_kanjikana": "wer_kanjikana_baseline",
                         "utt_recog_kanjikana": "utt_recog_kanjikana_baseline",
                         "cer_kana": "cer_kana_baseline",
@@ -497,41 +514,45 @@ class Manager:
                 how="left",
             )
             .with_columns(
-                (pl.col("wer_kanjikana") - pl.col("wer_kanjikana_baseline")).alias(
-                    "wer_kanjikana_diff"
-                ),
-                (pl.col("cer_kana") - pl.col("cer_kana_baseline")).alias(
+                (
+                    pl.col("wer_kanjikana_compare") - pl.col("wer_kanjikana_baseline")
+                ).alias("wer_kanjikana_diff"),
+                (pl.col("cer_kana_compare") - pl.col("cer_kana_baseline")).alias(
                     "cer_kana_diff"
                 ),
-                (pl.col("per_phoneme") - pl.col("per_phoneme_baseline")).alias(
+                (pl.col("per_phoneme_compare") - pl.col("per_phoneme_baseline")).alias(
                     "per_phoneme_diff"
                 ),
-                (pl.col("spk_sim") - pl.col("spk_sim_baseline")).alias("spk_sim_diff"),
+                (pl.col("spk_sim_compare") - pl.col("spk_sim_baseline")).alias(
+                    "spk_sim_diff"
+                ),
             )
             .select(
                 [
+                    "run_date_baseline",
+                    "run_date_compare",
                     "speaker",
                     "filename",
                     "wer_kanjikana_baseline",
-                    "wer_kanjikana",
+                    "wer_kanjikana_compare",
                     "wer_kanjikana_diff",
                     "utt_gt_kanjikana",
                     "utt_recog_kanjikana_baseline",
-                    "utt_recog_kanjikana",
+                    "utt_recog_kanjikana_compare",
                     "cer_kana_baseline",
-                    "cer_kana",
+                    "cer_kana_compare",
                     "cer_kana_diff",
                     "utt_gt_kana",
                     "utt_recog_kana_baseline",
-                    "utt_recog_kana",
+                    "utt_recog_kana_compare",
                     "per_phoneme_baseline",
-                    "per_phoneme",
+                    "per_phoneme_compare",
                     "per_phoneme_diff",
                     "utt_gt_phoneme",
                     "utt_recog_phoneme_baseline",
-                    "utt_recog_phoneme",
+                    "utt_recog_phoneme_compare",
                     "spk_sim_baseline",
-                    "spk_sim",
+                    "spk_sim_compare",
                     "spk_sim_diff",
                 ],
             )

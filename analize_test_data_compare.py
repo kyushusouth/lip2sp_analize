@@ -5,8 +5,8 @@ from utils import Manager
 
 def main():
     manager = Manager()
-    run_id_baseline = "q7pgvrou"
-    run_id_compare = "kv601pjm"
+    run_id_baseline = "ukfz2470"
+    run_id_compare = "sosf0acz"
     manager.save_csv_to_compare_methods(
         Path("./wandb_data"),
         run_id_baseline,
