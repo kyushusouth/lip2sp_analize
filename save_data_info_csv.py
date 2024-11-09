@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import polars as pl
 
 
@@ -40,20 +41,30 @@ def main():
         ["48nmuxoh", "1", "0.0001", "20241027_191342", False],
         ["q7pgvrou", "0", "0.0001", "20241027_171757", False],
         # 2で入力をメルスペクトログラムとHuBERT離散特徴量
-        ["q7pgvrou", "6", "0.0001", "20241027_171757", False],
-        ["q7pgvrou", "6", "0.001", "20241027_171757", False],
-        ["q7pgvrou", "6", "0.01", "20241027_171757", False],
-        ["q7pgvrou", "6", "0.1", "20241027_171757", False],
-        ["q7pgvrou", "6", "1.0", "20241027_171757", False],
+        ["wdsnci1d", "6", "0.0001", "20241106_145624", False],
+        ["56dqwrre", "6", "0.001", "20241106_171208", False],
+        ["7xji36uy", "6", "0.01", "20241106_192911", False],
+        ["pxeo2tih", "6", "0.1", "20241106_205822", False],
+        ["x44nt08d", "6", "1.0", "20241106_235636", False],
         # 2でネットワークAとネットワークBを一気に学習
-        ["q7pgvrou", "7", "0.0001", "20241027_171757", False],
-        ["q7pgvrou", "7", "0.001", "20241027_171757", False],
-        ["q7pgvrou", "7", "0.01", "20241027_171757", False],
-        ["q7pgvrou", "7", "0.1", "20241027_171757", False],
-        ["q7pgvrou", "7", "1.0", "20241027_171757", False],
+        ["q3g90r80", "7", "0.0001", "20241106_162207", False],
+        ["cpurcixo", "7", "0.001", "20241106_183841", False],
+        ["w7qmfdim", "7", "0.01", "20241106_201646", False],
+        ["t231ink6", "7", "0.1", "20241106_214845", False],
+        ["rwxbpec0", "7", "1.0", "20241107_004931", False],
     ]
 
     ckpt_path_lst = [
+        Path("base_hubert_2/20241107_004931/epoch:9-step:500.ckpt"),
+        Path("base_hubert_2/20241106_214845/epoch:42-step:2150.ckpt"),
+        Path("base_hubert_2/20241106_201646/epoch:3-step:200.ckpt"),
+        Path("base_hubert_2/20241106_183841/epoch:6-step:350.ckpt"),
+        Path("base_hubert_2/20241106_162207/epoch:6-step:350.ckpt"),
+        Path("base_hubert_2/20241106_235636/epoch:18-step:950.ckpt"),
+        Path("base_hubert_2/20241106_205822/epoch:16-step:850.ckpt"),
+        Path("base_hubert_2/20241106_192911/epoch:14-step:750.ckpt"),
+        Path("base_hubert_2/20241106_171208/epoch:43-step:2200.ckpt"),
+        Path("base_hubert_2/20241106_145624/epoch:43-step:2200.ckpt"),
         Path("base_hubert_2/20241027_171757/epoch:45-step:2300.ckpt"),
         Path("base_hubert_2/20241027_191342/epoch:47-step:2400.ckpt"),
         Path("base_hubert_2/20241027_210956/epoch:35-step:1800.ckpt"),
