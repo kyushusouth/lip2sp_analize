@@ -130,6 +130,10 @@ def main():
                     expected_epoch = 27
                 elif run_date == "20241028_154643":
                     expected_epoch = 9
+                elif run_date == "20241109_163501":
+                    expected_epoch = 29
+                elif run_date == "20241109_172152":
+                    expected_epoch = 24
                 else:
                     expected_epoch = min(selected_epoch + 10, 49)
                 run_data.append(str(ckpt_path))

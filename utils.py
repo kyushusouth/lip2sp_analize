@@ -31,6 +31,16 @@ class Manager:
             for table in table_lst:
                 if row["is_failed"] and table == "test_data":
                     continue
+                if row["run_id"] not in [
+                    "l1pr46xw",
+                    "sitbur40",
+                    "r26chnzo",
+                    "pa5ndjr3",
+                    "vn7tt7n0",
+                    "1kpb7wfk",
+                    "vzr1la0o",
+                ]:
+                    continue
                 self.logger.info(f"Start: {row['run_id']}, {table}")
                 cnt = 0
                 while True:
@@ -120,29 +130,30 @@ class Manager:
                     "total_loss",
                 ]:
                     continue
-                if (
-                    df_row["method_id"] == 2 or df_row["method_id"] == 4
-                ) and loss_name not in [
+                if df_row["method_id"] == 8 and loss_name not in [
+                    "ssl_conv_feature_loss",
+                    "total_loss",
+                ]:
+                    continue
+                if df_row["method_id"] in [2, 4, 6, 7, 9] and loss_name not in [
                     "mel_speech_ssl_loss",
                     "ssl_feature_cluster_speech_ssl_loss",
                     "total_loss",
                 ]:
                     continue
-                if (
-                    df_row["method_id"] == 3 or df_row["method_id"] == 5
-                ) and loss_name not in [
+                if df_row["method_id"] in [3, 5] and loss_name not in [
                     "mel_ensemble_loss",
                     "ssl_feature_cluster_ensemble_loss",
                     "total_loss",
                 ]:
                     continue
 
-                if df_row["method_id"] == 2 or df_row["method_id"] == 4:
+                if df_row["method_id"] in [2, 4, 6, 7, 9]:
                     if loss_name == "mel_speech_ssl_loss":
                         loss_name = "mel_loss"
                     elif loss_name == "ssl_feature_cluster_speech_ssl_loss":
                         loss_name = "ssl_feature_cluster_loss"
-                elif df_row["method_id"] == 3 or df_row["method_id"] == 5:
+                elif df_row["method_id"] in [3, 5]:
                     if loss_name == "mel_ensemble_loss":
                         loss_name = "mel_loss"
                     elif loss_name == "ssl_feature_cluster_ensemble_loss":
@@ -206,6 +217,33 @@ class Manager:
                                 df_row["loss_weight"],
                                 df_row["selected_epoch"],
                             ]
+                    elif df_row["run_id"] in ["sitbur40", "r26chnzo"]:
+                        if df_row["run_id"] == "sitbur40":
+                            data_row += [
+                                "r26chnzo",
+                                loss_name,
+                                df_row["method_id"],
+                                df_row["loss_weight"],
+                                self.df.filter((pl.col("run_id") == "r26chnzo"))
+                                .select(["selected_epoch"])
+                                .to_numpy()
+                                .reshape(-1)[0],
+                            ]
+                        elif df_row["run_id"] == "r26chnzo":
+                            data_row[0] += (
+                                self.df.filter(pl.col("run_id") == "sitbur40")
+                                .select(["expected_epoch"])
+                                .to_numpy()
+                                .reshape(-1)[0]
+                                + 1
+                            )
+                            data_row += [
+                                df_row["run_id"],
+                                loss_name,
+                                df_row["method_id"],
+                                df_row["loss_weight"],
+                                df_row["selected_epoch"],
+                            ]
                     else:
                         data_row += [
                             df_row["run_id"],
@@ -254,7 +292,7 @@ class Manager:
 
     def save_learning_curves(self, data_dir: Path, save_dir: Path) -> None:
         df = self.preprocess_losses_df(data_dir)
-        color_lst = ["red", "gold", "green", "blue", "purple"]
+        color_lst = ["black", "red", "gold", "green", "blue", "purple"]
         loss_name_lst = [
             "mel_loss",
             "ssl_feature_cluster_loss",
@@ -268,7 +306,9 @@ class Manager:
             save_dir_method.mkdir(parents=True, exist_ok=True)
 
             for loss_name in loss_name_lst:
-                if loss_name == "ssl_conv_feature_loss" and method_id != 1:
+                if loss_name == "ssl_conv_feature_loss" and method_id not in [1, 8]:
+                    continue
+                if loss_name != "ssl_conv_feature_loss" and method_id == 8:
                     continue
 
                 fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12, 4))
@@ -284,6 +324,10 @@ class Manager:
                     ),
                     color_lst,
                 ):
+                    if loss_weight == 0 and method_id != 8:
+                        continue
+                    if loss_weight != 0 and method_id == 8:
+                        continue
                     data_val = df.filter(
                         (pl.col("loss_name") == loss_name)
                         & (pl.col("loss_type") == "validation loss")
@@ -318,7 +362,9 @@ class Manager:
                         & (pl.col("loss_weight") == loss_weight)
                         & (pl.col("epoch") == pl.col("selected_epoch"))
                     )
-                    assert val_loss_selected_epoch.shape[0] == 1
+                    assert (
+                        val_loss_selected_epoch.shape[0] == 1
+                    ), f"{method_id=}, {loss_name=}, {loss_weight=}, {val_loss_selected_epoch.shape=}"
                     ax.plot(
                         val_loss_selected_epoch["epoch"],
                         val_loss_selected_epoch["loss_value"],
@@ -331,7 +377,7 @@ class Manager:
                     ax.set_ylabel("Loss")
                     ax.set_xlim(-1, 51)
                     if loss_name == "mel_loss":
-                        ax.set_ylim(0.2, 0.9)
+                        ax.set_ylim(0.2, 1.0)
                     elif loss_name == "ssl_feature_cluster_loss":
                         ax.set_ylim(0.5, 5.5)
                     elif loss_name == "ssl_conv_feature_loss":
