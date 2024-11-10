@@ -52,9 +52,24 @@ def main():
         ["w7qmfdim", "7", "0.01", "20241106_201646", False],
         ["t231ink6", "7", "0.1", "20241106_214845", False],
         ["rwxbpec0", "7", "1.0", "20241107_004931", False],
+        # 2でネットワークAをHuBERT中間特徴量のみを推定するように学習した場合
+        ["l1pr46xw", "8", "0", "20241109_143916", False],  # A
+        ["sitbur40", "9", "0.0001", "20241109_163501", True],  # B
+        ["r26chnzo", "9", "0.0001", "20241109_172152", False],  # B
+        ["pa5ndjr3", "9", "0.001", "20241109_180945", False],  # B
+        ["vn7tt7n0", "9", "0.01", "20241109_191946", False],  # B
+        ["1kpb7wfk", "9", "0.1", "20241109_201211", False],  # B
+        ["vzr1la0o", "9", "1.0", "20241109_210312", False],  # B
     ]
 
     ckpt_path_lst = [
+        Path("base_hubert_2/20241109_210312/epoch:12-step:650.ckpt"),
+        Path("base_hubert_2/20241109_201211/epoch:17-step:900.ckpt"),
+        Path("base_hubert_2/20241109_191946/epoch:18-step:950.ckpt"),
+        Path("base_hubert_2/20241109_180945/epoch:30-step:1550.ckpt"),
+        Path("base_hubert_2/20241109_172152/epoch:46-step:2350.ckpt"),
+        Path("base_hubert_2/20241109_163501/epoch:24-step:1250.ckpt"),
+        Path("base_hubert_2/20241109_143916/epoch:44-step:2250.ckpt"),
         Path("base_hubert_2/20241107_004931/epoch:9-step:500.ckpt"),
         Path("base_hubert_2/20241106_214845/epoch:42-step:2150.ckpt"),
         Path("base_hubert_2/20241106_201646/epoch:3-step:200.ckpt"),
