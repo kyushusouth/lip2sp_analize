@@ -60,9 +60,16 @@ def main():
         ["vn7tt7n0", "9", "0.01", "20241109_191946", False],  # B
         ["1kpb7wfk", "9", "0.1", "20241109_201211", False],  # B
         ["vzr1la0o", "9", "1.0", "20241109_210312", False],  # B
+        # ネットワークAとBの全体finetuning
+        ["ptu4dbb7", "10", "0.1", "20241110_140812", False],  # lr: 5.0e-4
+        ["lbbt90st", "11", "0.1", "20241110_144532", False],  # lr: 5.0e-5
+        ["wa80rvxi", "12", "0.1", "20241110_152301", False],  # lr: 5.0e-6
     ]
 
     ckpt_path_lst = [
+        Path("base_hubert_2/20241110_152301/epoch:4-step:250.ckpt"),
+        Path("base_hubert_2/20241110_144532/epoch:1-step:100.ckpt"),
+        Path("base_hubert_2/20241110_140812/epoch:1-step:100.ckpt"),
         Path("base_hubert_2/20241109_210312/epoch:12-step:650.ckpt"),
         Path("base_hubert_2/20241109_201211/epoch:17-step:900.ckpt"),
         Path("base_hubert_2/20241109_191946/epoch:18-step:950.ckpt"),
