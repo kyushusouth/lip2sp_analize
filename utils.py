@@ -32,13 +32,9 @@ class Manager:
                 if row["is_failed"] and table == "test_data":
                     continue
                 if row["run_id"] not in [
-                    "l1pr46xw",
-                    "sitbur40",
-                    "r26chnzo",
-                    "pa5ndjr3",
-                    "vn7tt7n0",
-                    "1kpb7wfk",
-                    "vzr1la0o",
+                    "ptu4dbb7",
+                    "lbbt90st",
+                    "wa80rvxi",
                 ]:
                     continue
                 self.logger.info(f"Start: {row['run_id']}, {table}")
@@ -135,7 +131,16 @@ class Manager:
                     "total_loss",
                 ]:
                     continue
-                if df_row["method_id"] in [2, 4, 6, 7, 9] and loss_name not in [
+                if df_row["method_id"] in [
+                    2,
+                    4,
+                    6,
+                    7,
+                    9,
+                    10,
+                    11,
+                    12,
+                ] and loss_name not in [
                     "mel_speech_ssl_loss",
                     "ssl_feature_cluster_speech_ssl_loss",
                     "total_loss",
@@ -148,7 +153,7 @@ class Manager:
                 ]:
                     continue
 
-                if df_row["method_id"] in [2, 4, 6, 7, 9]:
+                if df_row["method_id"] in [2, 4, 6, 7, 9, 10, 11, 12]:
                     if loss_name == "mel_speech_ssl_loss":
                         loss_name = "mel_loss"
                     elif loss_name == "ssl_feature_cluster_speech_ssl_loss":
@@ -326,8 +331,11 @@ class Manager:
                 ):
                     if loss_weight == 0 and method_id != 8:
                         continue
-                    if loss_weight != 0 and method_id == 8:
+                    if method_id == 8 and loss_weight != 0:
                         continue
+                    if method_id in [10, 11, 12] and loss_weight != 0.1:
+                        continue
+
                     data_val = df.filter(
                         (pl.col("loss_name") == loss_name)
                         & (pl.col("loss_type") == "validation loss")
@@ -377,7 +385,7 @@ class Manager:
                     ax.set_ylabel("Loss")
                     ax.set_xlim(-1, 51)
                     if loss_name == "mel_loss":
-                        ax.set_ylim(0.2, 1.0)
+                        ax.set_ylim(0.4, 1.0)
                     elif loss_name == "ssl_feature_cluster_loss":
                         ax.set_ylim(0.5, 5.5)
                     elif loss_name == "ssl_conv_feature_loss":
@@ -392,6 +400,197 @@ class Manager:
                 save_path.parent.mkdir(exist_ok=True, parents=True)
                 fig.savefig(str(save_path))
                 plt.close()
+
+        loss_weight = 0.1
+        for loss_name in loss_name_lst:
+            if loss_name == "ssl_conv_feature_loss":
+                continue
+
+            fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12, 4))
+
+            for method_id, color, learning_rate in zip(
+                [10, 11, 12], ["red", "gold", "green"], ["5.0e-4", "5.0e-5", "5.0e-6"]
+            ):
+                data_val = df.filter(
+                    (pl.col("loss_name") == loss_name)
+                    & (pl.col("loss_type") == "validation loss")
+                    & (pl.col("method_id") == method_id)
+                    & (pl.col("loss_weight") == loss_weight)
+                ).sort(["epoch"])
+                ax.plot(
+                    data_val["epoch"],
+                    data_val["loss_value"],
+                    label=str(learning_rate) + "_val",
+                    color=color,
+                )
+
+                data_train = df.filter(
+                    (pl.col("loss_name") == loss_name)
+                    & (pl.col("loss_type") == "train loss")
+                    & (pl.col("method_id") == method_id)
+                    & (pl.col("loss_weight") == loss_weight)
+                ).sort(["epoch"])
+                ax.plot(
+                    data_train["epoch"],
+                    data_train["loss_value"],
+                    label=str(learning_rate) + "_train",
+                    color=color,
+                    linestyle="dotted",
+                )
+
+                val_loss_selected_epoch = df.filter(
+                    (pl.col("loss_name") == loss_name)
+                    & (pl.col("loss_type") == "validation loss")
+                    & (pl.col("method_id") == method_id)
+                    & (pl.col("loss_weight") == loss_weight)
+                    & (pl.col("epoch") == pl.col("selected_epoch"))
+                )
+                assert (
+                    val_loss_selected_epoch.shape[0] == 1
+                ), f"{method_id=}, {loss_name=}, {loss_weight=}, {val_loss_selected_epoch.shape=}"
+                ax.plot(
+                    val_loss_selected_epoch["epoch"],
+                    val_loss_selected_epoch["loss_value"],
+                    marker="o",
+                    color=color,
+                    markersize=8,
+                )
+
+                ax.set_xlabel("Epoch")
+                ax.set_ylabel("Loss")
+                ax.set_xlim(-1, 51)
+                if loss_name == "mel_loss":
+                    ax.set_ylim(0.4, 1.0)
+                elif loss_name == "ssl_feature_cluster_loss":
+                    ax.set_ylim(0.5, 5.5)
+                elif loss_name == "ssl_conv_feature_loss":
+                    ax.set_ylim(0.1, 0.4)
+                elif loss_name == "total_loss":
+                    ax.set_ylim(0, 4.0)
+
+            plt.legend(bbox_to_anchor=(1, 1), loc="upper left")
+            fig.tight_layout()
+
+            save_path = save_dir / "10_11_12" / f"{loss_name}.png"
+            save_path.parent.mkdir(exist_ok=True, parents=True)
+            fig.savefig(str(save_path))
+            plt.close()
+
+    def save_learning_curves_compare(self, data_dir: Path, save_dir: Path) -> None:
+        df = self.preprocess_losses_df(data_dir)
+        loss_name_lst = [
+            "mel_loss",
+            "ssl_feature_cluster_loss",
+            "total_loss",
+        ]
+        for loss_name in loss_name_lst:
+            fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12, 4))
+
+            data_val = df.filter(
+                (pl.col("loss_name") == loss_name)
+                & (pl.col("loss_type") == "validation loss")
+                & (pl.col("method_id") == 2)
+                & (pl.col("loss_weight") == 0.1)
+            ).sort(["epoch"])
+            ax.plot(
+                data_val["epoch"],
+                data_val["loss_value"],
+                label="B_Randomized" + "_val",
+                color="blue",
+            )
+
+            data_train = df.filter(
+                (pl.col("loss_name") == loss_name)
+                & (pl.col("loss_type") == "train loss")
+                & (pl.col("method_id") == 2)
+                & (pl.col("loss_weight") == 0.1)
+            ).sort(["epoch"])
+            ax.plot(
+                data_train["epoch"],
+                data_train["loss_value"],
+                label="B_Randomized" + "_train",
+                color="blue",
+                linestyle="dotted",
+            )
+
+            val_loss_selected_epoch = df.filter(
+                (pl.col("loss_name") == loss_name)
+                & (pl.col("loss_type") == "validation loss")
+                & (pl.col("method_id") == 2)
+                & (pl.col("loss_weight") == 0.1)
+                & (pl.col("epoch") == pl.col("selected_epoch"))
+            )
+            assert val_loss_selected_epoch.shape[0] == 1
+            ax.plot(
+                val_loss_selected_epoch["epoch"],
+                val_loss_selected_epoch["loss_value"],
+                marker="o",
+                color="blue",
+                markersize=8,
+            )
+
+            data_val = df.filter(
+                (pl.col("loss_name") == loss_name)
+                & (pl.col("loss_type") == "validation loss")
+                & (pl.col("method_id") == 4)
+                & (pl.col("loss_weight") == 0.1)
+            ).sort(["epoch"])
+            ax.plot(
+                data_val["epoch"],
+                data_val["loss_value"],
+                label="B_Pretrained" + "_val",
+                color="red",
+            )
+
+            data_train = df.filter(
+                (pl.col("loss_name") == loss_name)
+                & (pl.col("loss_type") == "train loss")
+                & (pl.col("method_id") == 4)
+                & (pl.col("loss_weight") == 0.1)
+            ).sort(["epoch"])
+            ax.plot(
+                data_train["epoch"],
+                data_train["loss_value"],
+                label="B_Pretrained" + "_train",
+                color="red",
+                linestyle="dotted",
+            )
+
+            val_loss_selected_epoch = df.filter(
+                (pl.col("loss_name") == loss_name)
+                & (pl.col("loss_type") == "validation loss")
+                & (pl.col("method_id") == 4)
+                & (pl.col("loss_weight") == 0.1)
+                & (pl.col("epoch") == pl.col("selected_epoch"))
+            )
+            assert val_loss_selected_epoch.shape[0] == 1
+            ax.plot(
+                val_loss_selected_epoch["epoch"],
+                val_loss_selected_epoch["loss_value"],
+                marker="o",
+                color="red",
+                markersize=8,
+            )
+
+            ax.set_xlabel("Epoch")
+            ax.set_ylabel("Loss")
+            ax.set_xlim(-1, 51)
+            if loss_name == "mel_loss":
+                ax.set_ylim(0.4, 0.8)
+            elif loss_name == "ssl_feature_cluster_loss":
+                ax.set_ylim(0.5, 5.5)
+            elif loss_name == "ssl_conv_feature_loss":
+                ax.set_ylim(0.1, 0.4)
+            elif loss_name == "total_loss":
+                ax.set_ylim(0, 4.0)
+
+            plt.legend(bbox_to_anchor=(1, 1), loc="upper left")
+            fig.tight_layout()
+
+            save_path = save_dir / "compare_2_4" / f"{loss_name}.png"
+            save_path.parent.mkdir(exist_ok=True, parents=True)
+            fig.savefig(str(save_path))
+            plt.close()
 
     def preprocess_test_data_df(self, data_dir: Path) -> pl.DataFrame:
         data_path_lst = list(data_dir.glob("**/test_data_*.json"))
