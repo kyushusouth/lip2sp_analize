@@ -167,9 +167,12 @@ class Manager:
                 with open(str(data_path), "r") as f:
                     data = json.load(f)["data"]
 
+                data_required = []
                 for data_row in data:
                     if df_row["run_id"] in ["2zoxvtrk", "tg4r230f"]:
                         if df_row["run_id"] == "2zoxvtrk":
+                            if data_row[0] > 22:
+                                continue
                             data_row += [
                                 "tg4r230f",
                                 loss_name,
@@ -181,13 +184,7 @@ class Manager:
                                 .reshape(-1)[0],
                             ]
                         elif df_row["run_id"] == "tg4r230f":
-                            data_row[0] += (
-                                self.df.filter(pl.col("run_id") == "2zoxvtrk")
-                                .select(["expected_epoch"])
-                                .to_numpy()
-                                .reshape(-1)[0]
-                                + 1
-                            )
+                            data_row[0] += 23
                             data_row += [
                                 df_row["run_id"],
                                 loss_name,
@@ -197,6 +194,8 @@ class Manager:
                             ]
                     elif df_row["run_id"] in ["pstdmqnu", "yz0nwsvz"]:
                         if df_row["run_id"] == "pstdmqnu":
+                            if data_row[0] > 8:
+                                continue
                             data_row += [
                                 "yz0nwsvz",
                                 loss_name,
@@ -208,13 +207,7 @@ class Manager:
                                 .reshape(-1)[0],
                             ]
                         elif df_row["run_id"] == "yz0nwsvz":
-                            data_row[0] += (
-                                self.df.filter(pl.col("run_id") == "pstdmqnu")
-                                .select(["expected_epoch"])
-                                .to_numpy()
-                                .reshape(-1)[0]
-                                + 1
-                            )
+                            data_row[0] += 9
                             data_row += [
                                 df_row["run_id"],
                                 loss_name,
@@ -224,6 +217,8 @@ class Manager:
                             ]
                     elif df_row["run_id"] in ["sitbur40", "r26chnzo"]:
                         if df_row["run_id"] == "sitbur40":
+                            if data_row[0] > 24:
+                                continue
                             data_row += [
                                 "r26chnzo",
                                 loss_name,
@@ -235,13 +230,7 @@ class Manager:
                                 .reshape(-1)[0],
                             ]
                         elif df_row["run_id"] == "r26chnzo":
-                            data_row[0] += (
-                                self.df.filter(pl.col("run_id") == "sitbur40")
-                                .select(["expected_epoch"])
-                                .to_numpy()
-                                .reshape(-1)[0]
-                                + 1
-                            )
+                            data_row[0] += 25
                             data_row += [
                                 df_row["run_id"],
                                 loss_name,
@@ -257,7 +246,8 @@ class Manager:
                             df_row["loss_weight"],
                             df_row["selected_epoch"],
                         ]
-                data_lst += data
+                    data_required.append(data_row)
+                data_lst += data_required
 
         df = pl.DataFrame(
             data=data_lst,
@@ -385,9 +375,15 @@ class Manager:
                     ax.set_ylabel("Loss")
                     ax.set_xlim(-1, 51)
                     if loss_name == "mel_loss":
-                        ax.set_ylim(0.4, 1.0)
+                        if method_id == 7:
+                            ax.set_ylim(0.35, 3.5)
+                        else:
+                            ax.set_ylim(0.35, 1.0)
                     elif loss_name == "ssl_feature_cluster_loss":
-                        ax.set_ylim(0.5, 5.5)
+                        if method_id == 7:
+                            ax.set_ylim(0.5, 33.0)
+                        else:
+                            ax.set_ylim(0.5, 5.5)
                     elif loss_name == "ssl_conv_feature_loss":
                         ax.set_ylim(0.1, 0.4)
                     elif loss_name == "total_loss":
@@ -460,7 +456,7 @@ class Manager:
                 ax.set_ylabel("Loss")
                 ax.set_xlim(-1, 51)
                 if loss_name == "mel_loss":
-                    ax.set_ylim(0.4, 1.0)
+                    ax.set_ylim(0.2, 1.0)
                 elif loss_name == "ssl_feature_cluster_loss":
                     ax.set_ylim(0.5, 5.5)
                 elif loss_name == "ssl_conv_feature_loss":
